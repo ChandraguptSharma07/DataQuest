@@ -1,0 +1,6 @@
+asset_id,product,version,priority
+srv-001,nginx,1.18.0,high
+db-002,redis,6.0.0,critical
+web-003,apache_tomcat,9.0.40,medium
+api-004,flask,1.1.2,low
+win-005,windows_server_2019,10.0.17763,high
