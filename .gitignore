@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 venv/
+.venv_wsl/
 .env
 .vscode/
 stream.jsonl
