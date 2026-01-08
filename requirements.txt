@@ -1,2 +1,4 @@
 requests
 pathway
+google-generativeai
+python-dotenv
