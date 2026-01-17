@@ -6,13 +6,20 @@ from typing import List, Dict, Any
 
 from utils.nist_client import fetch_real_cves
 
-# Configure Logging to show the data mix
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - [GENERATOR] - %(message)s')
+import json
+import time
+import random
+import logging
+from typing import List, Dict, Any
+
+from utils.nist_client import fetch_real_cves
+
+# Simplify logging format - less "enterprise", more pragmatic
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [GEN] %(message)s', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
 
-# --- LOCAL DATABASE SIMULATION ---
-# These threats simulate our "Internal/Local" threat intelligence database.
-SIMULATED_LOCAL_THREATS = [
+# TODO: Move this to a proper DB later. For now, hardcoded is fine.
+LOCAL_DATA = [
     {"threat_id": "SIM-001", "description": "Simulated SQL Injection in Login", "score": 9.8},
     {"threat_id": "SIM-002", "description": "Simulated XSS in Search Bar", "score": 6.5},
     {"threat_id": "SIM-003", "description": "Simulated Buffer Overflow in Payment Gateway", "score": 8.0}
@@ -20,33 +27,27 @@ SIMULATED_LOCAL_THREATS = [
 
 def generate_stream():
     """
-    Generates a hybrid stream of threats:
-    1. Fetches REAL data from NIST API (Online Source).
-    2. Injects SIMULATED data from local DB (Local Source).
-    Demonstrates the pipeline's ability to fuse multiple intelligence sources.
+    Hybrid Stream: Merges online NIST data with our local sim data.
     """
-    logger.info("Starting Threat Stream Generator...")
-    logger.info("Mode: HYBRID (Online NIST Feed + Local Simulation)")
+    logger.info("Starting Hybrid Stream (NIST + Local)...")
 
     while True:
         try:
-            # 1. ONLINE SOURCE: Fetch real CVEs from NIST
-            logger.info("Fetching real-time data from NIST API...")
+            # 1. Grab online data
+            logger.info("Fetching NIST data...")
             real_cves = fetch_real_cves(limit=2)
             
-            # Rename field to match our internal schema (id -> threat_id)
+            # Quick cleanup: id -> threat_id
             for cve in real_cves:
                 if "id" in cve:
                      cve["threat_id"] = cve.pop("id")
-            
-            logger.info(f"Received {len(real_cves)} real-time alerts.")
 
-            # 2. LOCAL SOURCE: Inject a simulated threat to ensure we have matches
-            # (Use a random choice to simulate specific targeted attacks)
-            local_threat = random.choice(SIMULATED_LOCAL_THREATS)
-            logger.info(f"Injecting local simulation data: {local_threat['threat_id']}")
+            # 2. Inject local test data (randomly)
+            # We need this to verify our matching logic actually works locally
+            local_threat = random.choice(LOCAL_DATA)
+            logger.info(f"Injecting local sim: {local_threat['threat_id']}")
 
-            # 3. MERGE & STREAM
+            # 3. Flush to stream
             mixed_batch = real_cves + [local_threat]
             
             with open("stream.jsonl", "a") as f:
@@ -55,17 +56,17 @@ def generate_stream():
                     f.write(json.dumps(threat) + "\n")
                     f.flush()
             
-            logger.info(f" streamed {len(mixed_batch)} events to stream.jsonl")
+            logger.info(f"Wrote {len(mixed_batch)} events.")
             
-            # Rate limit to avoid API bans and simulate realistic traffic
+            # Don't hammer the API
             time.sleep(5)
             
         except KeyboardInterrupt:
-            logger.warning("Generator stopped by user.")
+            logger.warning("Stopping.")
             break
         except Exception as e:
-            logger.error(f"Stream generation error: {e}")
-            time.sleep(5)
+            logger.error(f"Crash in generator: {e}")
+            time.sleep(5) # Wait before retry
 
 if __name__ == "__main__":
     generate_stream()

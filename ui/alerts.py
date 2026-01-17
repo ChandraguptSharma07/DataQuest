@@ -1,40 +1,44 @@
-import streamlit as st
 import time
+import html
+import streamlit as st
 
-def trigger_alert(threat_data: dict):
+def trigger_alert(data: dict):
     """
-    Triggers UI alerts for high-priority threats.
-    1. Visual Toast Notification.
-    2. (Optional) Audio Alert.
+    Shows a toast for serious threats.
+    Safe (XSS escaped) + Throttled (3s).
     """
-    score = threat_data.get("score", 0)
+    # 1. Anti-Flood: Don't spam toasts
+    now = time.time()
+    last = st.session_state.get("last_toast", 0)
+    
+    if now - last < 3.0:
+        return 
+
+    score = data.get("score", 0)
+    # 2. XSS Fix: Escape the product name!
+    prod_safe = html.escape(data.get("product", "Unknown"))
     
     if score >= 9.0:
-        # CRITICAL ALERT
-        msg = f"🚨 CRITICAL THREAT: {threat_data.get('product', 'Unknown')} (Score: {score})"
-        st.toast(msg, icon="🔥")
-        # In a real app, play a siren sound here
-        # play_sound("siren.mp3") 
+        st.session_state.last_toast = now
+        st.toast(f"🚨 CRITICAL: {prod_safe} (Score: {score})", icon="🔥")
         
     elif score >= 7.0:
-        # HIGH ALERT
-        msg = f"⚠️ High Risk: {threat_data.get('product', 'Unknown')}"
-        st.toast(msg, icon="⚠️")
+        st.session_state.last_toast = now
+        st.toast(f"⚠️ Risk: {prod_safe}", icon="⚠️")
 
 def render_critical_section(alerts: list):
-    """
-    Renders the 'Critical Alerts' request in the sidebar or main dashboard.
-    """
     st.markdown("### 🚨 Critical Alerts")
     
+    # Filter for >= 9.0
     criticals = [a for a in alerts if a.get("score", 0) >= 9.0]
     
     if not criticals:
-        st.success("No Critical Threats Detected (System Secure)")
+        st.success("System Secure.")
         return
 
-    for alert in criticals[-3:]: # Show last 3
+    # Show last 3 only
+    for item in criticals[-3:]:
         with st.container(border=True):
-            st.markdown(f"**{alert['product']}**")
-            st.error(alert['analysis'])
-            st.caption(f"Threat ID: {alert['threat_id']} | Score: {alert['score']}")
+            st.markdown(f"**{item['product']}**")
+            st.error(item['analysis'])
+            st.caption(f"ID: {item['threat_id']} | Score: {item['score']}")

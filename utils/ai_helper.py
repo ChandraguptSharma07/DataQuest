@@ -4,71 +4,68 @@ import google.generativeai as genai
 from typing import Optional
 from dotenv import load_dotenv
 
-# Initialize Environment & Logging
 load_dotenv()
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - [AI] - %(message)s')
+
+# Simple logger
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [AI] %(message)s')
 logger = logging.getLogger(__name__)
 
-# Configure Gemini
+# API Key Check
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
-    logger.warning("GEMINI_API_KEY not found. AI features will be disabled.")
+    logger.warning("No API Key. AI is disabled.")
 else:
     genai.configure(api_key=api_key)
 
-# Initialize Model (Global)
-# Using 'flash-exp' for speed, fallback to 'flash' if needed
+# Global model init
 try:
+    # Use flash-exp because it's faster
     model = genai.GenerativeModel('gemini-2.0-flash-exp')
 except Exception as e:
-    logger.error(f"Failed to initialize Gemini Model: {e}")
+    logger.error(f"Model init failed: {e}")
     model = None
 
-def analyze_risk(threat_desc: str, asset_info: str) -> str:
+def analyze_risk(desc: str, asset: str) -> str:
     """
-    Sends threat context to Gemini for risk assessment.
-    Returns: Analyzed text (Risk Level + Explanation + Fix).
+    Asks Gemini to analyze the threat.
     """
     if not model:
-        return "AI Module Offline: Check API Key."
+        return "AI Offline."
 
+    # Keep prompt simple and direct
     prompt = f"""
-    Analyze this security match:
-    Threat: {threat_desc}
-    Asset: {asset_info}
+    Context:
+    Threat: {desc}
+    Asset: {asset}
     
-    1. Risk Level (Low/Medium/High/Critical)
-    2. One sentence explanation.
-    3. Suggested Bash command to fix it.
+    Task:
+    1. Risk Level (Low/High/Critical)
+    2. One-line why.
+    3. Bash fix command.
     """
     
     try:
-        response = model.generate_content(prompt)
-        return response.text
+        return model.generate_content(prompt).text
     except Exception as e:
-        logger.error(f"Gemini API Error: {e}")
-        return f"AI Analysis Failed: {str(e)[:50]}..." # Truncate error for UI cleaner view
+        logger.error(f"GenAI Error: {e}")
+        return "Analysis Failed."
 
-def generate_fix_script(threat_id: str, analysis_text: str) -> str:
+def generate_fix_script(tid: str, analysis: str) -> str:
     """
-    Generates a remediation shell script in the /fixes/ directory.
-    Returns: Absolute path to the generated script.
+    Writes a dummy fix script to disk.
     """
-    filename = f"fixes/fix_{threat_id}.sh"
+    path = f"fixes/fix_{tid}.sh"
     try:
-        with open(filename, "w") as f:
-            f.write("#!/bin/bash\n")
-            f.write(f"# Auto-generated fix for Threat ID: {threat_id}\n")
-            f.write(f"# Analysis Context: {analysis_text.replace(chr(10), ' ')}\n")
-            f.write("\n# [Placeholder] In a production system, the AI's suggested command would go here.\n")
-            f.write("echo 'Applying security patch...'\n")
-            f.write("sleep 2\n")
-            f.write("echo 'Patch applied successfully.'\n")
+        with open(path, "w") as f:
+            f.write(f"#!/bin/bash\n# Fix for {tid}\n# {analysis.replace(chr(10), ' ')}\n")
+            f.write("echo 'Patching...'\n")
+            f.write("sleep 1\n")
+            f.write("echo 'Done.'\n")
         
-        logger.info(f"Generated fix script: {filename}")
-        return filename
-    except IOError as e:
-        logger.error(f"Failed to write fix script {filename}: {e}")
+        logger.info(f"Created script: {path}")
+        return path
+    except Exception as e:
+        logger.error(f"Write failed: {e}")
         return ""
 
 if __name__ == "__main__":
