@@ -1,11 +1,14 @@
 import pathway as pw
 
+# Schema Definition for Unified Threat Stream
+# This acts as the standard interface for both Online (NIST) and Local (Simulated) data.
 class ThreatSchema(pw.Schema):
-    id: str
+    threat_id: str
     description: str
     score: float
     timestamp: float
 
+# Schema for Static Asset Inventory
 class InventorySchema(pw.Schema):
     asset_id: str
     product: str
@@ -13,12 +16,19 @@ class InventorySchema(pw.Schema):
     priority: str
 
 def get_data_sources():
+    """
+    Connects to the data sources:
+    1. Streaming: JSONL file populated by stream_generator.py (The "River" of data)
+    2. Static: CSV file containing asset inventory (The "Rock" of data)
+    """
+    # 1. Real-time Threat Stream (NIST + Local Sim)
     threats = pw.io.jsonlines.read(
         "stream.jsonl",
         schema=ThreatSchema,
         mode="streaming"
     )
 
+    # 2. Static Asset Database
     inventory = pw.io.csv.read(
         "inventory.csv",
         schema=InventorySchema,

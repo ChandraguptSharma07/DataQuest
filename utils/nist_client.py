@@ -1,31 +1,62 @@
+import logging
 import requests
+from typing import List, Dict, Any, Optional
 
-def fetch_real_cves(api_key=None, limit=5):
-    url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+# Constants
+NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+DEFAULT_TIMEOUT = 10
+
+# Configure Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+def fetch_real_cves(api_key: Optional[str] = None, limit: int = 5) -> List[Dict[str, Any]]:
+    """
+    Fetches the latest CVEs from the NIST NVD API.
+    Returns a clean list of dictionaries with ID, Description, and Score.
+    """
     headers = {"apiKey": api_key} if api_key else {}
     params = {"resultsPerPage": limit}
 
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
+        logger.info(f"Connecting to NIST NVD API (Limit: {limit})...")
+        response = requests.get(NVD_API_URL, headers=headers, params=params, timeout=DEFAULT_TIMEOUT)
         response.raise_for_status()
-        data = response.json()
+        
+        payload = response.json()
+        vulnerabilities = payload.get("vulnerabilities", [])
+        
+        logger.info(f"Successfully fetched {len(vulnerabilities)} raw records.")
 
         clean_cves = []
-        for item in data.get("vulnerabilities", []):
-            cve = item.get("cve", {})
-            metrics = cve.get("metrics", {}).get("cvssMetricV31", [])
-            score = metrics[0]["cvssData"]["baseScore"] if metrics else 5.0
+        for record in vulnerabilities:
+            cve_data = record.get("cve", {})
             
+            # Extract CVSS Score (Prioritize V3.1)
+            metrics = cve_data.get("metrics", {}).get("cvssMetricV31", [])
+            base_score = metrics[0]["cvssData"]["baseScore"] if metrics else 5.0
+            
+            # Extract Description (English)
+            descriptions = cve_data.get("descriptions", [])
+            desc_text = next((d["value"] for d in descriptions if d["lang"] == "en"), "No description available")
+
             clean_cves.append({
-                "id": cve.get("id"),
-                "description": cve.get("descriptions", [{}])[0].get("value", "No description"),
-                "score": score
+                "threat_id": cve_data.get("id"),
+                "description": desc_text,
+                "score": base_score
             })
             
         return clean_cves
 
-    except Exception:
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error contacting NIST API: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error parsing NIST data: {e}")
         return []
 
 if __name__ == "__main__":
-    print(fetch_real_cves())
+    # Quick functionality test
+    cves = fetch_real_cves()
+    for cve in cves:
+        print(f"[{cve['score']}] {cve['threat_id']}: {cve['description'][:60]}...")

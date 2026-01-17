@@ -6,3 +6,7 @@ venv/
 .vscode/
 stream.jsonl
 alerts.jsonl
+*.txt
+logic_debug.py
+.xalka/
+GEMINI.md
