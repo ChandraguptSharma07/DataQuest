@@ -4,3 +4,13 @@ db-002,redis,6.0.0,critical
 web-003,apache_tomcat,9.0.40,medium
 api-004,flask,1.1.2,low
 win-005,windows_server_2019,10.0.17763,high
+sys-99,CICs,1.0,critical
+custom-1768923552,fake_virus_of_CICs,1.0,critical
+custom-1768927122,fake_virus_of_CICs,1.0,critical
+custom-1768928101,fake_virus_of_CICs,1.0,critical
+custom-1768929761,fake_virus_of_CICs,1.0,critical
+custom-1768930251,fake_virus_of_CICs,1.0,critical
+custom-1768933188,fake_virus_of_CICs,1.0,critical
+custom-1768934482,fake_virus_of_CICs,1.0,critical
+custom-1768935313,fake_virus_of_CICs,1.0,critical
+custom-1768936311,fake_virus_of_CICs,1.0,critical

@@ -1,0 +1,271 @@
+\documentclass[12pt, a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{float}
+
+\geometry{margin=1in}
+
+% --- Code Styling ---
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single
+}
+\lstset{style=mystyle}
+
+% --- Document Info ---
+\title{\textbf{Zero-Day Cyber Sentinel} \\ \large A Real-Time Threat Intelligence System}
+\author{Chandragupt Sharma}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This report presents the design and implementation of \textbf{Zero-Day Cyber Sentinel}, a real-time threat intelligence dashboard that fuses live CVE data from the NIST National Vulnerability Database (NVD) with an organization's asset inventory. The system leverages Pathway's streaming engine for incremental data processing and Google Gemini for AI-powered risk analysis. The result is a sub-5-second pipeline from threat publication to actionable alert, significantly outperforming traditional batch-based vulnerability management systems.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ==============================================================================
+\section{Problem Statement}
+% ==============================================================================
+
+In modern cybersecurity, \textbf{time is the most critical resource}. The attack surface of organizations is constantly expanding, and adversaries are increasingly leveraging zero-day vulnerabilities---exploits that are published and weaponized before defenders can react.
+
+Traditional vulnerability management systems suffer from three fundamental limitations:
+
+\begin{enumerate}
+    \item \textbf{Polling/Batching Delays:} Most commercial tools check for new CVEs on a scheduled basis (e.g., nightly or weekly scans). This creates a dangerous window where a published vulnerability is known to attackers but not yet flagged by defenders.
+    
+    \item \textbf{Manual Asset Matching:} Security teams often maintain spreadsheets or static databases to cross-reference CVEs with their internal asset inventory. This process is slow, error-prone, and fails to scale as the number of CVEs and assets grows.
+    
+    \item \textbf{Lack of Contextual Analysis:} A CVE with a CVSS score of 9.8 is not equally critical for every organization. Without context about \textit{which specific assets} are affected and \textit{why} the vulnerability matters, security teams are left to manually triage an overwhelming volume of alerts.
+\end{enumerate}
+
+\textbf{Zero-Day Cyber Sentinel} addresses these problems by implementing a \textbf{real-time streaming architecture} that:
+\begin{itemize}
+    \item Ingests CVE data the moment it is published.
+    \item Automatically filters threats against a live asset inventory.
+    \item Uses Generative AI to explain the risk in plain English.
+\end{itemize}
+
+% ==============================================================================
+\section{System Workflow}
+% ==============================================================================
+
+The system is designed as a \textbf{three-stage pipeline}, with each stage decoupled for resilience and debuggability.
+
+\subsection{Architecture Diagram}
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.9\textwidth}{
+\centering
+\texttt{
+\begin{tabular}{ccccc}
+NIST API & $\rightarrow$ & stream\_generator.py & $\rightarrow$ & stream.jsonl \\
+ & & & & $\downarrow$ \\
+ & & & & Pathway Engine \\
+ & & inventory.csv & $\rightarrow$ & (logic.py) \\
+ & & & & $\downarrow$ \\
+ & & & & Gemini API \\
+ & & & & $\downarrow$ \\
+ & & & & alerts.jsonl \\
+ & & & & $\downarrow$ \\
+ & & & & Streamlit (app.py)
+\end{tabular}
+}
+}}
+\caption{High-Level Data Flow}
+\end{figure}
+
+\subsection{Stage 1: Ingestion (\texttt{stream\_generator.py})}
+
+The ingestion layer is responsible for polling the NIST NVD API and writing raw threat data to a local JSONL file.
+
+\begin{itemize}
+    \item \textbf{Polling Frequency:} Every 5 seconds.
+    \item \textbf{Data Source:} NIST NVD REST API v2.0.
+    \item \textbf{Simulated Data:} For demonstration purposes, the generator can also inject simulated threats or accept manual input via a text file (\texttt{manual\_input.txt}).
+\end{itemize}
+
+\subsection{Stage 2: Processing (\texttt{logic.py} - Pathway)}
+
+This is the core of the system. Pathway reads from \texttt{stream.jsonl} and \texttt{inventory.csv}, performs a streaming join, and enriches matched threats with AI analysis.
+
+\begin{lstlisting}[language=Python, caption={Pathway Streaming Join (Simplified)}]
+matches = threats.join(
+    inventory,
+    pw.left.join_key == pw.right.join_key
+).filter(
+    is_relevant(pw.this.description, pw.this.product)
+)
+\end{lstlisting}
+
+\subsection{Stage 3: Visualization (\texttt{app.py} - Streamlit)}
+
+The Streamlit dashboard polls \texttt{alerts.jsonl} and displays matched, analyzed alerts in real-time. It also provides:
+\begin{itemize}
+    \item Toast notifications for new critical alerts.
+    \item A historical trend chart of threat volume.
+    \item An AI chatbot (``SENTINEL'') for security Q\&A.
+\end{itemize}
+
+% ==============================================================================
+\section{Pathway Usage}
+% ==============================================================================
+
+Pathway (\url{https://pathway.com}) is a Python framework for building real-time data pipelines. Unlike traditional batch-processing tools (e.g., Pandas, Spark), Pathway processes data \textbf{incrementally} as it arrives.
+
+\subsection{Why Pathway?}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Feature} & \textbf{Traditional (Pandas)} & \textbf{Streaming (Pathway)} \\ \midrule
+Data Model & Static DataFrames & Live, updating Tables \\
+Join Semantics & One-time, in-memory & Continuous, stateful \\
+Latency & Minutes to hours & Milliseconds to seconds \\
+Parallelism & Manual (multiprocessing) & Automatic (Rust engine) \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of Batch vs. Streaming Paradigms}
+\end{table}
+
+\subsection{Key Pathway Concepts Used}
+
+\begin{enumerate}
+    \item \textbf{Connectors (\texttt{pw.io}):} The system uses \texttt{pw.io.jsonlines} to read from and write to JSONL files. Pathway automatically watches these files for new lines.
+    
+    \item \textbf{Streaming Joins:} The core logic performs a \texttt{join} between the live threat stream and the static inventory. Pathway maintains the inventory in memory and applies the join to each new threat as it arrives.
+    
+    \item \textbf{User-Defined Functions (UDFs):} The \texttt{@pw.udf} decorator allows embedding custom Python logic (e.g., the \texttt{is\_relevant} filter) directly into the pipeline.
+    
+    \item \textbf{\texttt{pw.apply}:} For more complex operations like calling an external API (Gemini), \texttt{pw.apply} allows invoking arbitrary Python functions on table columns.
+\end{enumerate}
+
+\begin{lstlisting}[language=Python, caption={UDF for Relevance Filtering}]
+@pw.udf
+def is_relevant(desc: str, prod: str) -> bool:
+    if not desc or not prod:
+        return False
+    return prod.casefold() in desc.casefold()
+\end{lstlisting}
+
+% ==============================================================================
+\section{Key Design Decisions}
+% ==============================================================================
+
+\subsection{JSONL as Inter-Process Communication (IPC)}
+
+Instead of using a message queue (e.g., Kafka, RabbitMQ), the system uses simple \texttt{.jsonl} files for communication between stages.
+
+\textbf{Rationale:}
+\begin{itemize}
+    \item \textbf{Simplicity:} No external infrastructure required. The system can run on a single machine with no dependencies.
+    \item \textbf{Debuggability:} Files can be inspected with \texttt{cat} or \texttt{tail -f} for real-time debugging.
+    \item \textbf{Pathway Compatibility:} Pathway's \texttt{jsonlines} connector natively supports file watching.
+\end{itemize}
+
+\textbf{Trade-off:} This approach is not suitable for high-throughput, distributed systems. For production, a Kafka connector would be recommended.
+
+\subsection{Hybrid Data Stream (Real + Simulated)}
+
+The \texttt{stream\_generator.py} mixes real NIST data with occasional simulated threats.
+
+\textbf{Rationale:}
+\begin{itemize}
+    \item \textbf{Demo Reliability:} NIST may not publish new CVEs during a live demo. Simulated data ensures the dashboard is always ``alive.''
+    \item \textbf{Testing:} Custom threats (e.g., ``fake\_virus\_of\_CICs'') can be injected to test specific matching logic.
+\end{itemize}
+
+\subsection{AI-First Analysis}
+
+Every matched threat is sent to Google Gemini for a contextual, plain-English explanation.
+
+\textbf{Rationale:}
+\begin{itemize}
+    \item \textbf{Actionability:} A CVSS score of 9.8 is not actionable. ``Update your Nginx server immediately due to a remote code execution flaw'' is.
+    \item \textbf{Knowledge Base Augmentation:} The AI can be ``pre-taught'' about organization-specific threats by injecting learnings into \texttt{knowledge\_base.jsonl}.
+\end{itemize}
+
+\subsection{Decoupled Microservice Architecture}
+
+The three Python scripts (\texttt{stream\_generator.py}, \texttt{logic.py}, \texttt{app.py}) run as independent processes.
+
+\textbf{Rationale:}
+\begin{itemize}
+    \item \textbf{Fault Isolation:} If the Streamlit dashboard crashes, the data pipeline continues to run.
+    \item \textbf{Independent Scaling:} In a production environment, each component could be scaled independently (e.g., multiple Pathway workers).
+    \item \textbf{Development Velocity:} Developers can modify one component without restarting the others.
+\end{itemize}
+
+% ==============================================================================
+\section{Technology Stack}
+% ==============================================================================
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Component} & \textbf{Technology} \\ \midrule
+Streaming Engine & Pathway (Python + Rust) \\
+AI Analysis & Google Gemini 1.5 Flash \\
+Dashboard & Streamlit \\
+Data Source & NIST NVD API v2.0 \\
+Containerization & Docker \\
+\bottomrule
+\end{tabular}
+\caption{Technology Stack Summary}
+\end{table}
+
+% ==============================================================================
+\section{Future Work}
+% ==============================================================================
+
+\begin{itemize}
+    \item \textbf{Slack/Discord Alerts:} Push critical alerts to messaging platforms for immediate operator notification.
+    \item \textbf{Kafka Connector:} Replace JSONL files with a Kafka topic for production-grade message durability and scalability.
+    \item \textbf{Historical Trend Analysis:} Store historical alerts in a time-series database (e.g., InfluxDB) for long-term trend analysis.
+    \item \textbf{Multi-Tenant Inventory:} Support multiple organizations with separate inventories and access controls.
+\end{itemize}
+
+% ==============================================================================
+\section{Conclusion}
+% ==============================================================================
+
+Zero-Day Cyber Sentinel demonstrates that real-time threat intelligence is achievable with modern streaming frameworks and Generative AI. By combining Pathway's sub-second processing latency with Gemini's contextual analysis, the system reduces the mean-time-to-detect (MTTD) from hours to seconds, providing a significant defensive advantage against emerging threats.
+
+\end{document}

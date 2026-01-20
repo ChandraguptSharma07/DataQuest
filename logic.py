@@ -40,7 +40,7 @@ def run_pipeline():
         asset_id=pw.this.asset_id,
         description=pw.this.description,
         product=pw.this.product,
-        analysis=pw.apply(analyze_risk, pw.this.description, pw.this.product),
+        analysis=pw.apply(analyze_risk, pw.this.description, pw.this.product, pw.this.threat_id),
     )
 
     # 5. Output

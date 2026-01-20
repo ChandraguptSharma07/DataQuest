@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+.venv_wsl
+env/
+venv/
+
+# Environment
+.env
+.env.example
+
+# Project specific
+stream.jsonl
+alerts.jsonl
+fixes/
+debug_trace.txt
+error_log.txt
+error_trace.txt
+logic_debug.py
+
+# XALKA
+.xalka/
+GEMINI.md

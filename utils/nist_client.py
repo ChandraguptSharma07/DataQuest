@@ -10,13 +10,15 @@ DEFAULT_TIMEOUT = 10
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def fetch_real_cves(api_key: Optional[str] = None, limit: int = 5) -> List[Dict[str, Any]]:
+def fetch_real_cves(api_key: Optional[str] = None, limit: int = 5, offset: int = 0) -> List[Dict[str, Any]]:
     """
-    Fetches the latest CVEs from the NIST NVD API.
-    Returns a clean list of dictionaries with ID, Description, and Score.
+    Fetches CVEs with pagination support.
     """
     headers = {"apiKey": api_key} if api_key else {}
-    params = {"resultsPerPage": limit}
+    params = {
+        "resultsPerPage": limit,
+        "startIndex": offset
+    }
 
     try:
         logger.info(f"Connecting to NIST NVD API (Limit: {limit})...")

@@ -17,18 +17,16 @@ class InventorySchema(pw.Schema):
 
 def get_data_sources():
     """
-    Connects to the data sources:
-    1. Streaming: JSONL file populated by stream_generator.py (The "River" of data)
-    2. Static: CSV file containing asset inventory (The "Rock" of data)
+    Connects to input streams.
     """
-    # 1. Real-time Threat Stream (NIST + Local Sim)
+    # 1. The Stream (NIST + Sims)
     threats = pw.io.jsonlines.read(
         "stream.jsonl",
         schema=ThreatSchema,
         mode="streaming"
     )
 
-    # 2. Static Asset Database
+    # 2. The Static DB (Inventory)
     inventory = pw.io.csv.read(
         "inventory.csv",
         schema=InventorySchema,
