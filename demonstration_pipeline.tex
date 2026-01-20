@@ -1,0 +1,120 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{parskip} % Adds space between paragraphs
+
+\geometry{margin=1in}
+
+% --- Colors ---
+\definecolor{primary}{RGB}{0, 51, 102}
+\definecolor{codebg}{RGB}{245, 245, 245}
+\definecolor{warning}{RGB}{204, 0, 0}
+
+% --- Styling ---
+\titleformat{\section}{\Large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{primary}}{}{0em}{}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    breaklines=true,
+    rulecolor=\color{gray!30},
+    showstringspaces=false,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+}
+
+% --- Meta ---
+\title{\textbf{Zero-Day Cyber Sentinel} \\ \Large Demonstration Pipeline}
+\author{Documentation}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\textbf{Total Duration:} $\sim$ 2-3 Minutes \\
+\textbf{Goal:} Demonstrate the real-time nature of the pipeline and the AI analysis value.
+
+\section{Prerequisites}
+
+Before starting the demo, ensure a clean state:
+
+\begin{lstlisting}[language=bash]
+# 1. Clear old data for a clean demo
+rm stream.jsonl alerts.jsonl knowledge_base.jsonl 2>/dev/null
+
+# 2. Start the system (Docker method)
+docker build -t sentinel .
+docker run -p 8501:8501 --env-file .env -v "${PWD}:/app" sentinel
+
+# 3. Wait ~30 seconds for initial NIST data to populate
+\end{lstlisting}
+
+\section{Demo Flow}
+
+\subsection{Step 1: Show the Architecture (30 seconds)}
+Open the 3 terminals/logs running in Docker or your local environment:
+\begin{enumerate}
+    \item \textbf{Stream Generator}: Fetching NIST CVE data every 5 seconds.
+    \item \textbf{Pathway Engine}: Processing and matching threats.
+    \item \textbf{Streamlit Dashboard}: Real-time visualization.
+\end{enumerate}
+
+\subsection{Step 2: Show the Dashboard (30 seconds)}
+Navigate to \url{http://localhost:8501}:
+\begin{itemize}
+    \item Point out the \textbf{Live NIST Threat Intelligence} table (raw stream).
+    \item Point out the \textbf{Matched Alerts} section (currently empty = system is secure).
+    \item Show the \textbf{Threat Detection Timeline} chart.
+\end{itemize}
+
+\subsection{Step 3: Inject a Custom Threat (1 minute)}
+This is the ``magic moment'':
+\begin{enumerate}
+    \item Click the \textbf{``Inject Demo Threat''} button on the dashboard sidebar.
+    \item Watch the threat appear in the Stream table within seconds.
+    \item Observe the toast notification pop up.
+    \item Show the new \textbf{CRITICAL} alert card with Gemini's AI analysis.
+\end{enumerate}
+
+\subsection{Step 4: Explain the AI Analysis (30 seconds)}
+Zoom in on the \textbf{Gemini Insight} box:
+\begin{itemize}
+    \item Show how the AI explains the threat in plain English.
+    \item Highlight the actionable recommendation (e.g., ``Update Nginx to v1.19+'').
+\end{itemize}
+
+\subsection{Step 5: Ask the Chatbot (Optional)}
+In the sidebar, ask SENTINEL:
+\begin{quote}
+``What should I do about this nginx vulnerability?''
+\end{quote}
+Show the AI-powered response utilizing the knowledge base.
+
+\section{Key Talking Points}
+
+\begin{enumerate}
+    \item \textbf{Speed}: ``From NIST publication to alert in under 5 seconds.''
+    \item \textbf{Filtering}: ``Only alerts on YOUR inventory, not every CVE.''
+    \item \textbf{AI Context}: ``Gemini explains WHY it matters, not just the score.''
+    \item \textbf{Real-Time}: ``No refresh button needed - it's truly streaming.''
+\end{enumerate}
+
+\section{Fallback: Manual Injection}
+
+If the dashboard button doesn't work, inject via terminal:
+\begin{lstlisting}[language=bash]
+echo "CRITICAL: Zero-day exploit in production server" > manual_input.txt
+\end{lstlisting}
+
+\end{document}

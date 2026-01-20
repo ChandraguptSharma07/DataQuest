@@ -21,3 +21,4 @@ manual_input.txt
 *.toc
 *.synctex.gz
 *.txt
+!DEMO.txt
